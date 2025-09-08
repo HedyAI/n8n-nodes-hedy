@@ -1,0 +1,64 @@
+# Source files (only distribute built files)
+credentials/**/*.ts
+nodes/**/*.ts
+!dist/**/*
+
+# Development files
+.github/
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Configuration files
+.editorconfig
+.eslintrc*
+.prettierrc*
+.gitignore
+.nvmrc
+tsconfig.json
+tslint.json
+
+# Documentation source
+docs/
+examples/
+*.md
+!README.md
+!LICENSE
+!CHANGELOG.md
+
+# Testing
+test/
+tests/
+coverage/
+.nyc_output/
+*.test.ts
+*.spec.ts
+
+# Build artifacts
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm
+.yarn-integrity
+
+# Environment
+.env
+.env.*
+
+# Package manager files
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Git
+.git/
+.gitattributes

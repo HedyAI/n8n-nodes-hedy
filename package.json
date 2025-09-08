@@ -1,0 +1,68 @@
+{
+  "name": "n8n-nodes-hedy",
+  "version": "1.0.0",
+  "description": "n8n nodes for Hedy - AI-powered meeting intelligence integration",
+  "keywords": [
+    "n8n-community-node-package",
+    "n8n",
+    "hedy",
+    "meeting",
+    "transcription",
+    "ai",
+    "productivity",
+    "workflow",
+    "automation"
+  ],
+  "license": "MIT",
+  "homepage": "https://github.com/HedyAI/n8n-nodes-hedy",
+  "author": {
+    "name": "HedyAI",
+    "email": "support@hedy.bot"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/HedyAI/n8n-nodes-hedy.git"
+  },
+  "bugs": {
+    "url": "https://github.com/HedyAI/n8n-nodes-hedy/issues"
+  },
+  "engines": {
+    "node": ">=18.10",
+    "pnpm": ">=9.1"
+  },
+  "main": "index.js",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "format": "prettier nodes credentials --write",
+    "lint": "eslint nodes credentials package.json",
+    "lintfix": "eslint nodes credentials package.json --fix",
+    "prepublishOnly": "pnpm build && pnpm lint"
+  },
+  "files": [
+    "dist"
+  ],
+  "n8n": {
+    "n8nNodesApiVersion": 1,
+    "credentials": [
+      "dist/credentials/HedyApi.credentials.js"
+    ],
+    "nodes": [
+      "dist/nodes/Hedy/Hedy.node.js",
+      "dist/nodes/Hedy/HedyTrigger.node.js"
+    ]
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "@typescript-eslint/eslint-plugin": "^6.19.0",
+    "@typescript-eslint/parser": "^6.19.0",
+    "eslint": "^8.56.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-n8n-nodes-base": "^1.16.1",
+    "prettier": "^3.2.4",
+    "typescript": "^5.3.3"
+  },
+  "peerDependencies": {
+    "n8n-workflow": "^1.25.0"
+  }
+}
