@@ -7,13 +7,10 @@ import {
 
 export class HedyApi implements ICredentialType {
 	name = 'hedyApi';
-	displayName = 'Hedy API';
+	displayName = 'Hedy';
 	documentationUrl = 'https://api.hedy.bot/docs';
-	httpRequestNode = {
-		name: 'Hedy',
-		docsUrl: 'https://api.hedy.bot/docs',
-		apiBaseUrl: 'https://api.hedy.bot/',
-	};
+	// Removed httpRequestNode to prevent generic HTTP Request node from appearing
+	// Users should use the dedicated Hedy node for all operations
 	properties: INodeProperties[] = [
 		{
 			displayName: 'API Key',
@@ -45,9 +42,9 @@ export class HedyApi implements ICredentialType {
 			{
 				type: 'responseSuccessBody',
 				properties: {
+					message: 'Connected successfully!',
 					key: 'success',
 					value: true,
-					message: 'Authentication successful!',
 				},
 			},
 		],

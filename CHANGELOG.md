@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.0] - 2025-01-09
+
+### Added
+- Topics resource with three operations:
+  - Get Topic: Retrieve a specific topic by ID
+  - Get Many Topics: List all available topics  
+  - Get Topic Sessions: Get all sessions associated with a specific topic
+- Client-side pagination for endpoints that don't support server-side limits:
+  - `/topics` endpoint
+  - `/todos` endpoint
+  - `/topics/{id}/sessions` endpoint
+  - `/sessions/{id}/todos` endpoint
+
+### Fixed
+- Webhook signature verification now handles missing signing secrets gracefully
+- Improved error messages for webhook registration failures
+- Signature verification defaults to disabled for easier testing
+- HTTPS requirement relaxed for localhost webhook URLs
+- Fixed confusing authentication test success/error message
+- Limit parameter now works correctly for all resources (client-side when API doesn't support it)
+
+### Changed
+- Removed HTTP Request node option to avoid confusion (users should use dedicated Hedy nodes)
+- Credential display name simplified from "Hedy API" to "Hedy"
+- Added Hedy logo to both action and trigger nodes
+
 ## [1.0.0] - 2025-01-09
 
 ### Added
@@ -60,6 +86,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Upgrade Notes
 When upgrading between major versions, please review the migration guide in the documentation.
 
-[Unreleased]: https://github.com/HedyAI/n8n-nodes-hedy/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/HedyAI/n8n-nodes-hedy/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/HedyAI/n8n-nodes-hedy/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/HedyAI/n8n-nodes-hedy/releases/tag/v1.0.0
 [0.1.0]: https://github.com/HedyAI/n8n-nodes-hedy/releases/tag/v0.1.0

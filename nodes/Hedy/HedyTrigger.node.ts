@@ -20,7 +20,7 @@ export class HedyTrigger implements INodeType {
 	description: INodeTypeDescription = {
 		displayName: 'Hedy Trigger',
 		name: 'hedyTrigger',
-		icon: 'file:hedy.svg',
+		icon: 'file:hedy.png',
 		group: ['trigger'],
 		version: 1,
 		description: 'Triggers when events happen in Hedy',
@@ -85,8 +85,8 @@ export class HedyTrigger implements INodeType {
 						displayName: 'Verify Signature',
 						name: 'verifySignature',
 						type: 'boolean',
-						default: true,
-						description: 'Whether to verify the webhook signature for security. Recommended to keep enabled.',
+						default: false,
+						description: 'Whether to verify the webhook signature for security. Currently disabled by default as the API does not return signing secrets.',
 					},
 				],
 			},
@@ -109,10 +109,24 @@ export class HedyTrigger implements INodeType {
 				const webhookUrl = this.getNodeWebhookUrl('default');
 				const event = this.getNodeParameter('event') as string;
 
-				if (!webhookUrl || !webhookUrl.startsWith('https://')) {
+				// Allow HTTP for localhost/local testing, but warn about it
+				const isLocalhost = webhookUrl && (
+					webhookUrl.includes('localhost') || 
+					webhookUrl.includes('127.0.0.1') || 
+					webhookUrl.includes('0.0.0.0')
+				);
+				
+				if (!webhookUrl) {
 					throw new NodeOperationError(
 						this.getNode(),
-						'Webhook URL must use HTTPS for security. Please ensure your n8n instance is configured with HTTPS.',
+						'No webhook URL available. Please ensure your n8n instance is properly configured.',
+					);
+				}
+				
+				if (!webhookUrl.startsWith('https://') && !isLocalhost) {
+					throw new NodeOperationError(
+						this.getNode(),
+						'Webhook URL must use HTTPS for security (except for localhost testing). Please ensure your n8n instance is configured with HTTPS.',
 					);
 				}
 
@@ -134,7 +148,8 @@ export class HedyTrigger implements INodeType {
 					// Store webhook data for deletion
 					const webhookData = this.getWorkflowStaticData('node');
 					webhookData.webhookId = webhook.id;
-					webhookData.signingSecret = webhook.signingSecret || '';
+					// Note: API currently doesn't return signingSecret
+					webhookData.signingSecret = webhook.signingSecret || null;
 					webhookData.event = event;
 
 					return true;
@@ -166,7 +181,7 @@ export class HedyTrigger implements INodeType {
 						await unregisterWebhook.call(this, webhookData.webhookId as string);
 					} catch (error) {
 						// Log but don't throw - webhook might already be deleted
-						console.warn(`Failed to delete webhook ${webhookData.webhookId}:`, error);
+						// Failed to delete webhook - this is expected if webhook was already deleted
 					}
 					
 					// Clear stored data
@@ -201,21 +216,19 @@ export class HedyTrigger implements INodeType {
 			const signingSecret = webhookData.signingSecret as string;
 
 			if (!signingSecret) {
-				throw new NodeOperationError(
-					this.getNode(),
-					'No signing secret found. Please reactivate this workflow to register the webhook properly.',
-				);
-			}
+				// API doesn't currently return signing secret, skip verification
+				// No signing secret available from API, skipping signature verification
+			} else {
+				// Get raw body for signature verification
+				const rawBody = req.rawBody || JSON.stringify(bodyData);
+				const isValid = verifyWebhookSignature(rawBody, signature, signingSecret);
 
-			// Get raw body for signature verification
-			const rawBody = req.rawBody || JSON.stringify(bodyData);
-			const isValid = verifyWebhookSignature(rawBody, signature, signingSecret);
-
-			if (!isValid) {
-				throw new NodeOperationError(
-					this.getNode(),
-					'Invalid webhook signature. This request might not be from Hedy.',
-				);
+				if (!isValid) {
+					throw new NodeOperationError(
+						this.getNode(),
+						'Invalid webhook signature. This request might not be from Hedy.',
+					);
+				}
 			}
 		}
 
@@ -228,8 +241,7 @@ export class HedyTrigger implements INodeType {
 
 		// Verify this is the expected event type
 		if (eventType && eventType !== expectedEvent) {
-			console.warn(`Received unexpected event type: ${eventType}, expected: ${expectedEvent}`);
-			// Still process it but log the warning
+			// Received unexpected event type but still processing
 		}
 
 		// Return the webhook data

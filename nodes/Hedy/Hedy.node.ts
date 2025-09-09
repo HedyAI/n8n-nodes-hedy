@@ -19,7 +19,7 @@ export class Hedy implements INodeType {
 	description: INodeTypeDescription = {
 		displayName: 'Hedy',
 		name: 'hedy',
-		icon: 'file:hedy.svg',
+		icon: 'file:hedy.png',
 		group: ['output'],
 		version: 1,
 		subtitle: '={{$parameter["resource"] + ": " + $parameter["operation"]}}',
@@ -59,6 +59,11 @@ export class Hedy implements INodeType {
 						name: 'Todo',
 						value: 'todo',
 						description: 'Todo item operations',
+					},
+					{
+						name: 'Topic',
+						value: 'topic',
+						description: 'Topic operations for organizing sessions',
 					},
 				],
 			},
@@ -150,6 +155,41 @@ export class Hedy implements INodeType {
 				],
 			},
 
+			// Topic operations
+			{
+				displayName: 'Operation',
+				name: 'operation',
+				type: 'options',
+				noDataExpression: true,
+				displayOptions: {
+					show: {
+						resource: ['topic'],
+					},
+				},
+				default: 'get',
+				required: true,
+				options: [
+					{
+						name: 'Get',
+						value: 'get',
+						description: 'Get a specific topic by ID',
+						action: 'Get a topic',
+					},
+					{
+						name: 'Get Many',
+						value: 'getAll',
+						description: 'Get all topics',
+						action: 'Get many topics',
+					},
+					{
+						name: 'Get Topic Sessions',
+						value: 'getSessions',
+						description: 'Get all sessions for a specific topic',
+						action: 'Get sessions by topic',
+					},
+				],
+			},
+
 			// Session ID parameter
 			{
 				displayName: 'Session ID',
@@ -201,6 +241,23 @@ export class Hedy implements INodeType {
 				placeholder: 'high_xyz789',
 			},
 
+			// Topic ID parameter for get operation
+			{
+				displayName: 'Topic ID',
+				name: 'topicId',
+				type: 'string',
+				required: true,
+				displayOptions: {
+					show: {
+						resource: ['topic'],
+						operation: ['get', 'getSessions'],
+					},
+				},
+				default: '',
+				description: 'The ID of the topic',
+				placeholder: 'topic_abc123',
+			},
+
 			// Return All parameter
 			{
 				displayName: 'Return All',
@@ -208,8 +265,8 @@ export class Hedy implements INodeType {
 				type: 'boolean',
 				displayOptions: {
 					show: {
-						resource: ['session', 'highlight', 'todo'],
-						operation: ['getAll', 'getBySession'],
+						resource: ['session', 'highlight', 'todo', 'topic'],
+						operation: ['getAll', 'getBySession', 'getSessions'],
 					},
 				},
 				default: false,
@@ -223,8 +280,8 @@ export class Hedy implements INodeType {
 				type: 'number',
 				displayOptions: {
 					show: {
-						resource: ['session', 'highlight', 'todo'],
-						operation: ['getAll', 'getBySession'],
+						resource: ['session', 'highlight', 'todo', 'topic'],
+						operation: ['getAll', 'getBySession', 'getSessions'],
 						returnAll: [false],
 					},
 				},
@@ -406,28 +463,19 @@ export class Hedy implements INodeType {
 						// Get all todos
 						const returnAll = this.getNodeParameter('returnAll', i) as boolean;
 
-						if (returnAll) {
-							responseData = await hedyApiRequestAllItems.call(
-								this,
-								'/todos',
-							);
-						} else {
+						// Note: The todos endpoint returns all todos as a flat array
+						// and doesn't support server-side pagination
+						responseData = await hedyApiRequest.call(
+							this,
+							'GET',
+							'/todos',
+						);
+
+						// Apply client-side limit if not returning all
+						if (!returnAll) {
 							const limit = this.getNodeParameter('limit', i) as number;
-							const qs: IDataObject = {
-								limit,
-							};
-
-							responseData = await hedyApiRequest.call(
-								this,
-								'GET',
-								'/todos',
-								undefined,
-								qs,
-							);
-
-							// Handle pagination response
-							if (responseData && typeof responseData === 'object' && 'data' in responseData) {
-								responseData = responseData.data;
+							if (Array.isArray(responseData) && responseData.length > limit) {
+								responseData = responseData.slice(0, limit);
 							}
 						}
 					} else if (operation === 'getBySession') {
@@ -440,28 +488,94 @@ export class Hedy implements INodeType {
 
 						const returnAll = this.getNodeParameter('returnAll', i) as boolean;
 
-						if (returnAll) {
-							responseData = await hedyApiRequestAllItems.call(
-								this,
-								`/sessions/${sessionId}/todos`,
-							);
-						} else {
+						// Note: The session todos endpoint doesn't support server-side pagination
+						// We always fetch all todos for the session and slice client-side if needed
+						responseData = await hedyApiRequest.call(
+							this,
+							'GET',
+							`/sessions/${sessionId}/todos`,
+						);
+
+						// Handle response format
+						if (responseData && typeof responseData === 'object' && 'data' in responseData) {
+							responseData = responseData.data;
+						}
+
+						// Apply client-side limit if not returning all
+						if (!returnAll) {
 							const limit = this.getNodeParameter('limit', i) as number;
-							const qs: IDataObject = {
-								limit,
-							};
+							if (Array.isArray(responseData) && responseData.length > limit) {
+								responseData = responseData.slice(0, limit);
+							}
+						}
+					}
+				} else if (resource === 'topic') {
+					// Topic operations
+					if (operation === 'get') {
+						// Get a specific topic
+						const topicId = this.getNodeParameter('topicId', i) as string;
+						
+						if (!topicId) {
+							throw new NodeOperationError(this.getNode(), 'Topic ID is required');
+						}
 
-							responseData = await hedyApiRequest.call(
-								this,
-								'GET',
-								`/sessions/${sessionId}/todos`,
-								undefined,
-								qs,
-							);
+						responseData = await hedyApiRequest.call(
+							this,
+							'GET',
+							`/topics/${topicId}`,
+						);
+					} else if (operation === 'getAll') {
+						// Get all topics
+						const returnAll = this.getNodeParameter('returnAll', i) as boolean;
 
-							// Handle pagination response
-							if (responseData && typeof responseData === 'object' && 'data' in responseData) {
-								responseData = responseData.data;
+						// Note: The topics endpoint doesn't support server-side pagination
+						// We always fetch all topics and then slice client-side if needed
+						responseData = await hedyApiRequest.call(
+							this,
+							'GET',
+							'/topics',
+						);
+
+						// Handle response format
+						if (responseData && typeof responseData === 'object' && 'data' in responseData) {
+							responseData = responseData.data;
+						}
+
+						// Apply client-side limit if not returning all
+						if (!returnAll) {
+							const limit = this.getNodeParameter('limit', i) as number;
+							if (Array.isArray(responseData) && responseData.length > limit) {
+								responseData = responseData.slice(0, limit);
+							}
+						}
+					} else if (operation === 'getSessions') {
+						// Get sessions for a specific topic
+						const topicId = this.getNodeParameter('topicId', i) as string;
+						
+						if (!topicId) {
+							throw new NodeOperationError(this.getNode(), 'Topic ID is required');
+						}
+
+						const returnAll = this.getNodeParameter('returnAll', i) as boolean;
+
+						// Note: The topic sessions endpoint doesn't support server-side pagination
+						// We always fetch all sessions for the topic and slice client-side if needed
+						responseData = await hedyApiRequest.call(
+							this,
+							'GET',
+							`/topics/${topicId}/sessions`,
+						);
+
+						// Handle response format
+						if (responseData && typeof responseData === 'object' && 'data' in responseData) {
+							responseData = responseData.data;
+						}
+
+						// Apply client-side limit if not returning all
+						if (!returnAll) {
+							const limit = this.getNodeParameter('limit', i) as number;
+							if (Array.isArray(responseData) && responseData.length > limit) {
+								responseData = responseData.slice(0, limit);
 							}
 						}
 					}

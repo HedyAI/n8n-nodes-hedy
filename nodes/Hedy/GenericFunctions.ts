@@ -68,6 +68,7 @@ export async function hedyApiRequest(
 			const apiError = error as any;
 			const errorCode = apiError.error?.code || 'unknown_error';
 			const errorMessage = apiError.error?.message || 'An unknown error occurred';
+			
 
 			// Provide user-friendly error messages
 			switch (errorCode) {
@@ -85,6 +86,16 @@ export async function hedyApiRequest(
 					throw new NodeOperationError(
 						this.getNode(),
 						'Invalid event type. Valid events: session.created, session.ended, highlight.created, todo.exported',
+					);
+				case ErrorCode.InvalidWebhookUrl:
+					throw new NodeOperationError(
+						this.getNode(),
+						'The Hedy API requires a publicly accessible webhook URL. For local testing, use a tunneling service like ngrok (https://ngrok.com) to expose your local n8n instance. Example: ngrok http 5678',
+					);
+				case ErrorCode.InvalidParameter:
+					throw new NodeOperationError(
+						this.getNode(),
+						`Invalid parameter: ${errorMessage}. Please check your webhook configuration.`,
 					);
 				default:
 					throw new NodeOperationError(this.getNode(), errorMessage);
@@ -140,7 +151,7 @@ export async function hedyApiRequestAllItems(
 
 		// Safety check to prevent infinite loops
 		if (returnData.length >= 1000) {
-			console.warn('Reached maximum item limit of 1000');
+			// Reached maximum item limit of 1000
 			break;
 		}
 	}
@@ -202,7 +213,7 @@ export async function unregisterWebhook(
 		);
 	} catch (error) {
 		// Ignore errors when deleting webhooks (webhook might already be deleted)
-		console.warn(`Failed to delete webhook ${webhookId}:`, error);
+		// Failed to delete webhook - this is expected if webhook was already deleted
 	}
 }
 
