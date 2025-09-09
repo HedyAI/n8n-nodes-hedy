@@ -27,8 +27,7 @@
     "url": "https://github.com/HedyAI/n8n-nodes-hedy/issues"
   },
   "engines": {
-    "node": ">=18.10",
-    "pnpm": ">=9.1"
+    "node": ">=18.10"
   },
   "main": "index.js",
   "scripts": {
@@ -37,7 +36,7 @@
     "format": "prettier nodes credentials --write",
     "lint": "eslint . --ext .ts",
     "lintfix": "eslint . --ext .ts --fix",
-    "prepublishOnly": "pnpm build && pnpm lint"
+    "prepublishOnly": "npm run build"
   },
   "files": [
     "dist"
