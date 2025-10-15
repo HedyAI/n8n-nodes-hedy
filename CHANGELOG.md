@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.1] - 2025-01-14
+
+### Fixed
+- Added pairedItem linking to all returnData items for proper workflow item tracking in n8n cloud
+- Ensures n8n can correctly track data lineage through complex workflows
+
 ## [1.1.0] - 2025-01-09
 
 ### Added
@@ -86,7 +92,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Upgrade Notes
 When upgrading between major versions, please review the migration guide in the documentation.
 
-[Unreleased]: https://github.com/HedyAI/n8n-nodes-hedy/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/HedyAI/n8n-nodes-hedy/compare/v1.1.1...HEAD
+[1.1.1]: https://github.com/HedyAI/n8n-nodes-hedy/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/HedyAI/n8n-nodes-hedy/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/HedyAI/n8n-nodes-hedy/releases/tag/v1.0.0
 [0.1.0]: https://github.com/HedyAI/n8n-nodes-hedy/releases/tag/v0.1.0
