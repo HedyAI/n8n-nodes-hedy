@@ -583,9 +583,15 @@ export class Hedy implements INodeType {
 
 				// Process response data
 				if (Array.isArray(responseData)) {
-					returnData.push(...responseData.map(item => ({ json: item })));
+					returnData.push(...responseData.map(item => ({
+						json: item,
+						pairedItem: { item: i }
+					})));
 				} else if (responseData !== undefined) {
-					returnData.push({ json: responseData });
+					returnData.push({
+						json: responseData,
+						pairedItem: { item: i }
+					});
 				}
 			} catch (error) {
 				if (this.continueOnFail()) {
