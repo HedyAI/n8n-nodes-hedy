@@ -7,6 +7,15 @@ export interface Topic {
 	iconName: string;
 }
 
+export interface SessionContext {
+	id: string;
+	title: string;
+	content?: string;
+	isDefault: boolean;
+	createdAt?: string;
+	updatedAt?: string;
+}
+
 export interface Todo {
 	id: string;
 	text: string;
@@ -122,4 +131,5 @@ export enum ErrorCode {
 	InvalidParameter = 'invalid_parameter',
 	ResourceNotFound = 'resource_not_found',
 	InternalError = 'internal_error',
+	ContextLimitExceeded = 'context_limit_exceeded',
 }

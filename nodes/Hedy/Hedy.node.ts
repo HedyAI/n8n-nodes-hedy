@@ -46,14 +46,19 @@ export class Hedy implements INodeType {
 				required: true,
 				options: [
 					{
-						name: 'Session',
-						value: 'session',
-						description: 'Meeting session operations',
+						name: 'Context',
+						value: 'context',
+						description: 'Session context operations for AI instructions',
 					},
 					{
 						name: 'Highlight',
 						value: 'highlight',
 						description: 'Meeting highlight operations',
+					},
+					{
+						name: 'Session',
+						value: 'session',
+						description: 'Meeting session operations',
 					},
 					{
 						name: 'Todo',
@@ -64,6 +69,53 @@ export class Hedy implements INodeType {
 						name: 'Topic',
 						value: 'topic',
 						description: 'Topic operations for organizing sessions',
+					},
+				],
+			},
+
+			// Context operations
+			{
+				displayName: 'Operation',
+				name: 'operation',
+				type: 'options',
+				noDataExpression: true,
+				displayOptions: {
+					show: {
+						resource: ['context'],
+					},
+				},
+				default: 'getAll',
+				required: true,
+				options: [
+					{
+						name: 'Create',
+						value: 'create',
+						description: 'Create a new session context',
+						action: 'Create a session context',
+					},
+					{
+						name: 'Delete',
+						value: 'delete',
+						description: 'Delete a session context',
+						action: 'Delete a session context',
+					},
+					{
+						name: 'Get',
+						value: 'get',
+						description: 'Get a specific session context by ID',
+						action: 'Get a session context',
+					},
+					{
+						name: 'Get Many',
+						value: 'getAll',
+						description: 'Get all session contexts',
+						action: 'Get many session contexts',
+					},
+					{
+						name: 'Update',
+						value: 'update',
+						description: 'Update a session context',
+						action: 'Update a session context',
 					},
 				],
 			},
@@ -258,6 +310,115 @@ export class Hedy implements INodeType {
 				placeholder: 'topic_abc123',
 			},
 
+			// Context ID parameter for get, update, delete operations
+			{
+				displayName: 'Context ID',
+				name: 'contextId',
+				type: 'string',
+				required: true,
+				displayOptions: {
+					show: {
+						resource: ['context'],
+						operation: ['get', 'update', 'delete'],
+					},
+				},
+				default: '',
+				description: 'The ID of the session context',
+				placeholder: 'ctx_abc123',
+			},
+
+			// Title parameter for context create
+			{
+				displayName: 'Title',
+				name: 'title',
+				type: 'string',
+				required: true,
+				displayOptions: {
+					show: {
+						resource: ['context'],
+						operation: ['create'],
+					},
+				},
+				default: '',
+				description: 'Title of the session context (max 200 characters)',
+				placeholder: 'Sales Calls',
+			},
+
+			// Additional fields for context create
+			{
+				displayName: 'Additional Fields',
+				name: 'additionalFields',
+				type: 'collection',
+				placeholder: 'Add Field',
+				default: {},
+				displayOptions: {
+					show: {
+						resource: ['context'],
+						operation: ['create'],
+					},
+				},
+				options: [
+					{
+						displayName: 'Content',
+						name: 'content',
+						type: 'string',
+						typeOptions: {
+							rows: 5,
+						},
+						default: '',
+						description: 'Instructions or context for AI analysis (max 20,000 characters)',
+					},
+					{
+						displayName: 'Is Default',
+						name: 'isDefault',
+						type: 'boolean',
+						default: false,
+						description: 'Whether this context should be the default for new sessions',
+					},
+				],
+			},
+
+			// Update fields for context update
+			{
+				displayName: 'Update Fields',
+				name: 'updateFields',
+				type: 'collection',
+				placeholder: 'Add Field',
+				default: {},
+				displayOptions: {
+					show: {
+						resource: ['context'],
+						operation: ['update'],
+					},
+				},
+				options: [
+					{
+						displayName: 'Title',
+						name: 'title',
+						type: 'string',
+						default: '',
+						description: 'Title of the session context (max 200 characters)',
+					},
+					{
+						displayName: 'Content',
+						name: 'content',
+						type: 'string',
+						typeOptions: {
+							rows: 5,
+						},
+						default: '',
+						description: 'Instructions or context for AI analysis (max 20,000 characters)',
+					},
+					{
+						displayName: 'Is Default',
+						name: 'isDefault',
+						type: 'boolean',
+						default: false,
+						description: 'Whether this context should be the default for new sessions',
+					},
+				],
+			},
+
 			// Return All parameter
 			{
 				displayName: 'Return All',
@@ -265,7 +426,7 @@ export class Hedy implements INodeType {
 				type: 'boolean',
 				displayOptions: {
 					show: {
-						resource: ['session', 'highlight', 'todo', 'topic'],
+						resource: ['context', 'session', 'highlight', 'todo', 'topic'],
 						operation: ['getAll', 'getBySession', 'getSessions'],
 					},
 				},
@@ -280,7 +441,7 @@ export class Hedy implements INodeType {
 				type: 'number',
 				displayOptions: {
 					show: {
-						resource: ['session', 'highlight', 'todo', 'topic'],
+						resource: ['context', 'session', 'highlight', 'todo', 'topic'],
 						operation: ['getAll', 'getBySession', 'getSessions'],
 						returnAll: [false],
 					},
@@ -363,7 +524,127 @@ export class Hedy implements INodeType {
 			try {
 				let responseData: any;
 
-				if (resource === 'session') {
+				if (resource === 'context') {
+					// Context operations
+					if (operation === 'create') {
+						// Create a new session context
+						const title = this.getNodeParameter('title', i) as string;
+						const additionalFields = this.getNodeParameter('additionalFields', i, {}) as IDataObject;
+
+						if (!title) {
+							throw new NodeOperationError(this.getNode(), 'Title is required');
+						}
+
+						const body: IDataObject = { title };
+
+						// Only include fields that are explicitly set
+						if (additionalFields.content !== undefined && additionalFields.content !== '') {
+							body.content = additionalFields.content;
+						}
+						if (additionalFields.isDefault !== undefined) {
+							body.isDefault = additionalFields.isDefault;
+						}
+
+						responseData = await hedyApiRequest.call(
+							this,
+							'POST',
+							'/contexts',
+							body,
+						);
+					} else if (operation === 'delete') {
+						// Delete a session context
+						const contextId = this.getNodeParameter('contextId', i) as string;
+
+						if (!contextId) {
+							throw new NodeOperationError(this.getNode(), 'Context ID is required');
+						}
+
+						responseData = await hedyApiRequest.call(
+							this,
+							'DELETE',
+							`/contexts/${contextId}`,
+						);
+
+						// API returns { success: true, message: "..." }
+						// Ensure we have a valid response for n8n item pairing
+						if (!responseData) {
+							responseData = { success: true, deleted: true };
+						}
+					} else if (operation === 'get') {
+						// Get a specific session context
+						const contextId = this.getNodeParameter('contextId', i) as string;
+
+						if (!contextId) {
+							throw new NodeOperationError(this.getNode(), 'Context ID is required');
+						}
+
+						responseData = await hedyApiRequest.call(
+							this,
+							'GET',
+							`/contexts/${contextId}`,
+						);
+					} else if (operation === 'getAll') {
+						// Get all session contexts
+						const returnAll = this.getNodeParameter('returnAll', i) as boolean;
+
+						// Note: The contexts endpoint doesn't support server-side pagination
+						// We always fetch all contexts and then slice client-side if needed
+						responseData = await hedyApiRequest.call(
+							this,
+							'GET',
+							'/contexts',
+						);
+
+						// Handle response format
+						if (responseData && typeof responseData === 'object' && 'data' in responseData) {
+							responseData = responseData.data;
+						}
+
+						// Apply client-side limit if not returning all
+						if (!returnAll) {
+							const limit = this.getNodeParameter('limit', i) as number;
+							if (Array.isArray(responseData) && responseData.length > limit) {
+								responseData = responseData.slice(0, limit);
+							}
+						}
+					} else if (operation === 'update') {
+						// Update a session context
+						const contextId = this.getNodeParameter('contextId', i) as string;
+						const updateFields = this.getNodeParameter('updateFields', i, {}) as IDataObject;
+
+						if (!contextId) {
+							throw new NodeOperationError(this.getNode(), 'Context ID is required');
+						}
+
+						// Build the update body with only explicitly set fields
+						const body: IDataObject = {};
+
+						if (updateFields.title !== undefined && updateFields.title !== '') {
+							body.title = updateFields.title;
+						}
+						if (updateFields.content !== undefined) {
+							body.content = updateFields.content;
+						}
+						if (updateFields.isDefault !== undefined) {
+							body.isDefault = updateFields.isDefault;
+						}
+
+						// Guard against empty update
+						if (Object.keys(body).length === 0) {
+							throw new NodeOperationError(
+								this.getNode(),
+								'At least one field must be set for update. Add a field in Update Fields.',
+							);
+						}
+
+						responseData = await hedyApiRequest.call(
+							this,
+							'PATCH',
+							`/contexts/${contextId}`,
+							body,
+						);
+					}
+				} else if (resource === 'session') {
 					// Session operations
 					if (operation === 'get') {
 						// Get single session

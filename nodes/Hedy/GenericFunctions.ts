@@ -95,7 +95,12 @@ export async function hedyApiRequest(
 				case ErrorCode.InvalidParameter:
 					throw new NodeOperationError(
 						this.getNode(),
-						`Invalid parameter: ${errorMessage}. Please check your webhook configuration.`,
+						`Invalid parameter: ${errorMessage}. Please check your configuration.`,
+					);
+				case ErrorCode.ContextLimitExceeded:
+					throw new NodeOperationError(
+						this.getNode(),
+						'Context limit reached. Free tier allows 1 session context. Upgrade your plan to create more.',
 					);
 				default:
 					throw new NodeOperationError(this.getNode(), errorMessage);

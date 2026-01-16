@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.0] - 2025-01-16
+
+### Added
+- Session Context resource with full CRUD operations:
+  - Create Context: Create a new session context with title, content, and default flag
+  - Get Context: Retrieve a specific session context by ID
+  - Get Many Contexts: List all session contexts
+  - Update Context: Modify title, content, or default status
+  - Delete Context: Remove a session context
+- `SessionContext` type definition for TypeScript support
+- `ContextLimitExceeded` error code with user-friendly upgrade message for free tier users
+- Multi-line text input for context content field (supports up to 20,000 characters)
+
+### Changed
+- This is the first release with write operations (create, update, delete) - all previous operations were read-only
+
 ## [1.1.1] - 2025-01-14
 
 ### Fixed
@@ -92,7 +108,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Upgrade Notes
 When upgrading between major versions, please review the migration guide in the documentation.
 
-[Unreleased]: https://github.com/HedyAI/n8n-nodes-hedy/compare/v1.1.1...HEAD
+[Unreleased]: https://github.com/HedyAI/n8n-nodes-hedy/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/HedyAI/n8n-nodes-hedy/compare/v1.1.1...v1.2.0
 [1.1.1]: https://github.com/HedyAI/n8n-nodes-hedy/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/HedyAI/n8n-nodes-hedy/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/HedyAI/n8n-nodes-hedy/releases/tag/v1.0.0
