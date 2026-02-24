@@ -37,6 +37,10 @@ export interface Session {
 	endTime: string;
 	duration: number;
 	transcript: string;
+	cleaned_transcript?: string | null;
+	cleanedTranscript?: string | null;
+	cleaned_at?: string | null;
+	cleanedAt?: string | null;
 	conversations: Conversation[] | string;
 	meeting_minutes?: string;
 	meetingMinutes?: string;

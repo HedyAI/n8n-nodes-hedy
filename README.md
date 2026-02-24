@@ -126,6 +126,8 @@ Generate daily meeting reports:
   "endTime": "2024-01-10T10:30:00Z",
   "duration": 1800,
   "transcript": "Full transcript...",
+  "cleaned_transcript": "AI-cleaned transcript...",
+  "cleaned_at": "2024-01-10T11:00:00Z",
   "conversations": [...],
   "meeting_minutes": "Meeting notes...",
   "recap": "Summary...",
@@ -133,6 +135,8 @@ Generate daily meeting reports:
   "topic": {...}
 }
 ```
+
+> **Note:** `cleaned_transcript` and `cleaned_at` are `null` when the transcript has not yet been cleaned.
 
 ### Highlight Object
 ```json
