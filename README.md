@@ -48,8 +48,9 @@ n8n:
 
 2. In n8n:
    - Go to Credentials
-   - Create new "Hedy API" credential
+   - Create new "Hedy" credential
    - Paste your API key
+   - Select your **Region** (US or EU) if your account uses EU data residency
    - Click "Save"
 
 ## 📦 Nodes Included
@@ -59,6 +60,7 @@ Receives real-time webhook notifications when events occur in Hedy:
 
 - **Session Created** - When a new meeting session starts
 - **Session Ended** - When a meeting session completes
+- **Session Exported** - When a user manually exports a session
 - **Highlight Created** - When a highlight is created during a meeting
 - **Todo Exported** - When a todo item is exported
 
@@ -72,10 +74,23 @@ Performs actions and retrieves data from Hedy:
 - **Highlights**
   - Get Highlight - Retrieve specific highlight details
   - Get Many Highlights - List multiple highlights
-  
+  - Get by Session - Get all highlights for a specific session
+
 - **Todos**
+  - Get Todo - Retrieve a specific todo by ID
   - Get Many Todos - List all todo items
   - Get Todos by Session - Get todos for a specific session
+
+- **Topics**
+  - Create Topic - Create a new topic
+  - Get Topic - Retrieve a specific topic
+  - Get Many Topics - List all topics
+  - Get Topic Sessions - Get sessions for a topic
+  - Update Topic - Modify a topic
+  - Delete Topic - Remove a topic
+
+- **Contexts**
+  - Create, Get, Get Many, Update, Delete session contexts
 
 ## 🎯 Example Workflows
 
@@ -120,37 +135,43 @@ Generate daily meeting reports:
 ### Session Object
 ```json
 {
-  "id": "sess_abc123",
+  "sessionId": "sess_abc123",
   "title": "Team Standup",
   "startTime": "2024-01-10T10:00:00Z",
   "endTime": "2024-01-10T10:30:00Z",
   "duration": 1800,
+  "session_type": "meeting",
   "transcript": "Full transcript...",
   "cleaned_transcript": "AI-cleaned transcript...",
   "cleaned_at": "2024-01-10T11:00:00Z",
   "conversations": [...],
   "meeting_minutes": "Meeting notes...",
   "recap": "Summary...",
+  "session_notes": "[{\"insert\":\"Key takeaway\\n\"}]",
   "user_todos": [...],
+  "highlights": [...],
   "topic": {...}
 }
 ```
 
-> **Note:** `cleaned_transcript` and `cleaned_at` are `null` when the transcript has not yet been cleaned.
+> **Note:** `cleaned_transcript` and `cleaned_at` are `null` when the transcript has not yet been cleaned. `session_notes` contains rich text in Parchment JSON (Delta) format.
 
 ### Highlight Object
 ```json
 {
-  "id": "high_xyz789",
+  "highlightId": "high_xyz789",
   "sessionId": "sess_abc123",
   "timestamp": "2024-01-10T10:15:00Z",
+  "timeIndex": 900000,
   "title": "Key Decision",
   "rawQuote": "Original quote...",
   "cleanedQuote": "Cleaned quote...",
   "mainIdea": "Core concept...",
-  "aiInsights": "Analysis..."
+  "aiInsight": "Analysis..."
 }
 ```
+
+> **Note:** The list endpoint (`Get Many`) returns summary fields only (`highlightId`, `sessionId`, `timestamp`, `title`). The detail endpoint (`Get`) returns all fields.
 
 ### Todo Object
 ```json
@@ -167,7 +188,7 @@ Generate daily meeting reports:
 ## ⚙️ Configuration
 
 ### Webhook Limits
-- Maximum of 10 webhooks per Hedy account
+- Maximum of 50 webhooks per Hedy account
 - Webhooks must use HTTPS URLs
 - Each webhook receives a unique signing secret for security
 
@@ -186,7 +207,7 @@ All webhooks include an `X-Hedy-Signature` header for verification:
 
 1. The signature is an HMAC SHA-256 hash of the request body
 2. Each webhook has a unique signing secret
-3. Signature verification is enabled by default (recommended)
+3. Signature verification is disabled by default (enable in Options when signing secrets are available)
 
 ### API Key Security
 - Never share your API key publicly
@@ -200,7 +221,7 @@ All webhooks include an `X-Hedy-Signature` header for verification:
 
 **Webhook Registration Fails**
 - Ensure your n8n instance uses HTTPS
-- Check you haven't exceeded the 10 webhook limit
+- Check you haven't exceeded the 50 webhook limit
 - Verify your API key has the necessary permissions
 
 **No Data Returned**

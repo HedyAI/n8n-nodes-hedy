@@ -9,8 +9,6 @@ export class HedyApi implements ICredentialType {
 	name = 'hedyApi';
 	displayName = 'Hedy';
 	documentationUrl = 'https://api.hedy.bot/docs';
-	// Removed httpRequestNode to prevent generic HTTP Request node from appearing
-	// Users should use the dedicated Hedy node for all operations
 	properties: INodeProperties[] = [
 		{
 			displayName: 'API Key',
@@ -24,12 +22,28 @@ export class HedyApi implements ICredentialType {
 			description: 'Your Hedy API key for authentication. Get it from your Hedy dashboard at Settings → API → Generate New Key.',
 			placeholder: 'hedy_live_...',
 		},
+		{
+			displayName: 'Region',
+			name: 'region',
+			type: 'options',
+			default: 'us',
+			description: 'Select EU if your Hedy account uses EU data residency',
+			options: [
+				{
+					name: 'US (Default)',
+					value: 'us',
+				},
+				{
+					name: 'EU',
+					value: 'eu',
+				},
+			],
+		},
 	];
 
-	// Test the credentials
 	test: ICredentialTestRequest = {
 		request: {
-			baseURL: 'https://api.hedy.bot',
+			baseURL: '={{$credentials.region === "eu" ? "https://eu-api.hedy.bot" : "https://api.hedy.bot"}}',
 			url: '/sessions',
 			headers: {
 				Authorization: '=Bearer {{$credentials.apiKey}}',
@@ -50,7 +64,6 @@ export class HedyApi implements ICredentialType {
 		],
 	};
 
-	// Define how the credential authenticates requests
 	authenticate: IAuthenticateGeneric = {
 		type: 'generic',
 		properties: {

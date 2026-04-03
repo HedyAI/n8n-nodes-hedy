@@ -15,6 +15,34 @@ import {
 
 // Type imports are available but not used directly in runtime
 
+/**
+ * Add backward-compatible field aliases to API response data.
+ * Detects payload shape rather than relying on resource name, so it works
+ * for nested objects too (e.g. sessions inside topic.getSessions, highlights inside session detail).
+ */
+function normalizeResponseData(data: IDataObject, _resource?: string): IDataObject {
+	// Highlight normalization (by shape: has highlightId or aiInsight)
+	if (data.highlightId !== undefined && data.id === undefined) {
+		data.id = data.highlightId;
+	}
+	if (data.aiInsight !== undefined && data.aiInsights === undefined) {
+		data.aiInsights = data.aiInsight;
+	}
+	// Session normalization (by shape: has sessionId and startTime — distinguishes from highlights which also have sessionId)
+	if (data.sessionId !== undefined && data.startTime !== undefined && data.id === undefined) {
+		data.id = data.sessionId;
+	}
+	// Recurse into embedded highlights array
+	if (Array.isArray(data.highlights)) {
+		for (const highlight of data.highlights) {
+			if (highlight && typeof highlight === 'object') {
+				normalizeResponseData(highlight as IDataObject);
+			}
+		}
+	}
+	return data;
+}
+
 export class Hedy implements INodeType {
 	description: INodeTypeDescription = {
 		displayName: 'Hedy',
@@ -170,6 +198,12 @@ export class Hedy implements INodeType {
 						action: 'Get a highlight',
 					},
 					{
+						name: 'Get by Session',
+						value: 'getBySession',
+						description: 'Get highlights for a specific session',
+						action: 'Get highlights by session',
+					},
+					{
 						name: 'Get Many',
 						value: 'getAll',
 						description: 'Get multiple highlights',
@@ -192,6 +226,12 @@ export class Hedy implements INodeType {
 				default: 'getAll',
 				required: true,
 				options: [
+					{
+						name: 'Get',
+						value: 'get',
+						description: 'Get a specific todo by ID',
+						action: 'Get a todo',
+					},
 					{
 						name: 'Get Many',
 						value: 'getAll',
@@ -222,6 +262,18 @@ export class Hedy implements INodeType {
 				required: true,
 				options: [
 					{
+						name: 'Create',
+						value: 'create',
+						description: 'Create a new topic',
+						action: 'Create a topic',
+					},
+					{
+						name: 'Delete',
+						value: 'delete',
+						description: 'Delete a topic',
+						action: 'Delete a topic',
+					},
+					{
 						name: 'Get',
 						value: 'get',
 						description: 'Get a specific topic by ID',
@@ -238,6 +290,12 @@ export class Hedy implements INodeType {
 						value: 'getSessions',
 						description: 'Get all sessions for a specific topic',
 						action: 'Get sessions by topic',
+					},
+					{
+						name: 'Update',
+						value: 'update',
+						description: 'Update a topic',
+						action: 'Update a topic',
 					},
 				],
 			},
@@ -259,7 +317,7 @@ export class Hedy implements INodeType {
 				placeholder: 'sess_abc123',
 			},
 
-			// Session ID for todos
+			// Session ID for todo get and getBySession
 			{
 				displayName: 'Session ID',
 				name: 'sessionId',
@@ -268,11 +326,45 @@ export class Hedy implements INodeType {
 				displayOptions: {
 					show: {
 						resource: ['todo'],
+						operation: ['get', 'getBySession'],
+					},
+				},
+				default: '',
+				description: 'The ID of the session',
+				placeholder: 'sess_abc123',
+			},
+
+			// Todo ID for todo get
+			{
+				displayName: 'Todo ID',
+				name: 'todoId',
+				type: 'string',
+				required: true,
+				displayOptions: {
+					show: {
+						resource: ['todo'],
+						operation: ['get'],
+					},
+				},
+				default: '',
+				description: 'The ID of the todo to retrieve',
+				placeholder: 'todo_abc123',
+			},
+
+			// Session ID for highlight getBySession
+			{
+				displayName: 'Session ID',
+				name: 'sessionId',
+				type: 'string',
+				required: true,
+				displayOptions: {
+					show: {
+						resource: ['highlight'],
 						operation: ['getBySession'],
 					},
 				},
 				default: '',
-				description: 'The ID of the session to get todos for',
+				description: 'The ID of the session to get highlights for',
 				placeholder: 'sess_abc123',
 			},
 
@@ -293,7 +385,7 @@ export class Hedy implements INodeType {
 				placeholder: 'high_xyz789',
 			},
 
-			// Topic ID parameter for get operation
+			// Topic ID parameter for get, update, delete, getSessions
 			{
 				displayName: 'Topic ID',
 				name: 'topicId',
@@ -302,12 +394,29 @@ export class Hedy implements INodeType {
 				displayOptions: {
 					show: {
 						resource: ['topic'],
-						operation: ['get', 'getSessions'],
+						operation: ['get', 'update', 'delete', 'getSessions'],
 					},
 				},
 				default: '',
 				description: 'The ID of the topic',
 				placeholder: 'topic_abc123',
+			},
+
+			// Topic Name parameter for create
+			{
+				displayName: 'Name',
+				name: 'name',
+				type: 'string',
+				required: true,
+				displayOptions: {
+					show: {
+						resource: ['topic'],
+						operation: ['create'],
+					},
+				},
+				default: '',
+				description: 'Name of the topic (max 100 characters)',
+				placeholder: 'Weekly Standups',
 			},
 
 			// Context ID parameter for get, update, delete operations
@@ -415,6 +524,111 @@ export class Hedy implements INodeType {
 						type: 'boolean',
 						default: false,
 						description: 'Whether this context should be the default for new sessions',
+					},
+				],
+			},
+
+			// Additional fields for topic create
+			{
+				displayName: 'Additional Fields',
+				name: 'additionalFields',
+				type: 'collection',
+				placeholder: 'Add Field',
+				default: {},
+				displayOptions: {
+					show: {
+						resource: ['topic'],
+						operation: ['create'],
+					},
+				},
+				options: [
+					{
+						displayName: 'Color',
+						name: 'color',
+						type: 'string',
+						default: '',
+						description: 'Hex color code for the topic',
+						placeholder: '#4A90D9',
+					},
+					{
+						displayName: 'Description',
+						name: 'description',
+						type: 'string',
+						default: '',
+						description: 'Description of the topic (max 500 characters)',
+					},
+					{
+						displayName: 'Icon Name',
+						name: 'iconName',
+						type: 'string',
+						default: '',
+						description: 'Material icon name',
+						placeholder: 'groups',
+					},
+					{
+						displayName: 'Topic Context',
+						name: 'topicContext',
+						type: 'string',
+						typeOptions: {
+							rows: 5,
+						},
+						default: '',
+						description: 'Custom instructions for AI processing of sessions in this topic (max 20,000 characters)',
+					},
+				],
+			},
+
+			// Update fields for topic update
+			{
+				displayName: 'Update Fields',
+				name: 'updateFields',
+				type: 'collection',
+				placeholder: 'Add Field',
+				default: {},
+				displayOptions: {
+					show: {
+						resource: ['topic'],
+						operation: ['update'],
+					},
+				},
+				options: [
+					{
+						displayName: 'Color',
+						name: 'color',
+						type: 'string',
+						default: '',
+						description: 'Hex color code for the topic',
+					},
+					{
+						displayName: 'Description',
+						name: 'description',
+						type: 'string',
+						default: '',
+						description: 'Description of the topic (max 500 characters)',
+					},
+					{
+						displayName: 'Icon Name',
+						name: 'iconName',
+						type: 'string',
+						default: '',
+						description: 'Material icon name',
+					},
+					{
+						displayName: 'Name',
+						name: 'name',
+						type: 'string',
+						default: '',
+						description: 'Name of the topic (max 100 characters)',
+					},
+					{
+						displayName: 'Topic Context',
+						name: 'topicContext',
+						type: 'string',
+						typeOptions: {
+							rows: 5,
+						},
+						default: '',
+						description: 'Custom instructions for AI processing (max 20,000 characters). Leave empty to clear.',
 					},
 				],
 			},
@@ -527,7 +741,6 @@ export class Hedy implements INodeType {
 				if (resource === 'context') {
 					// Context operations
 					if (operation === 'create') {
-						// Create a new session context
 						const title = this.getNodeParameter('title', i) as string;
 						const additionalFields = this.getNodeParameter('additionalFields', i, {}) as IDataObject;
 
@@ -537,7 +750,6 @@ export class Hedy implements INodeType {
 
 						const body: IDataObject = { title };
 
-						// Only include fields that are explicitly set
 						if (additionalFields.content !== undefined && additionalFields.content !== '') {
 							body.content = additionalFields.content;
 						}
@@ -552,7 +764,6 @@ export class Hedy implements INodeType {
 							body,
 						);
 					} else if (operation === 'delete') {
-						// Delete a session context
 						const contextId = this.getNodeParameter('contextId', i) as string;
 
 						if (!contextId) {
@@ -565,13 +776,10 @@ export class Hedy implements INodeType {
 							`/contexts/${contextId}`,
 						);
 
-						// API returns { success: true, message: "..." }
-						// Ensure we have a valid response for n8n item pairing
 						if (!responseData) {
 							responseData = { success: true, deleted: true };
 						}
 					} else if (operation === 'get') {
-						// Get a specific session context
 						const contextId = this.getNodeParameter('contextId', i) as string;
 
 						if (!contextId) {
@@ -584,23 +792,14 @@ export class Hedy implements INodeType {
 							`/contexts/${contextId}`,
 						);
 					} else if (operation === 'getAll') {
-						// Get all session contexts
 						const returnAll = this.getNodeParameter('returnAll', i) as boolean;
 
-						// Note: The contexts endpoint doesn't support server-side pagination
-						// We always fetch all contexts and then slice client-side if needed
 						responseData = await hedyApiRequest.call(
 							this,
 							'GET',
 							'/contexts',
 						);
 
-						// Handle response format
-						if (responseData && typeof responseData === 'object' && 'data' in responseData) {
-							responseData = responseData.data;
-						}
-
-						// Apply client-side limit if not returning all
 						if (!returnAll) {
 							const limit = this.getNodeParameter('limit', i) as number;
 							if (Array.isArray(responseData) && responseData.length > limit) {
@@ -608,7 +807,6 @@ export class Hedy implements INodeType {
 							}
 						}
 					} else if (operation === 'update') {
-						// Update a session context
 						const contextId = this.getNodeParameter('contextId', i) as string;
 						const updateFields = this.getNodeParameter('updateFields', i, {}) as IDataObject;
 
@@ -616,7 +814,6 @@ export class Hedy implements INodeType {
 							throw new NodeOperationError(this.getNode(), 'Context ID is required');
 						}
 
-						// Build the update body with only explicitly set fields
 						const body: IDataObject = {};
 
 						if (updateFields.title !== undefined && updateFields.title !== '') {
@@ -629,7 +826,6 @@ export class Hedy implements INodeType {
 							body.isDefault = updateFields.isDefault;
 						}
 
-						// Guard against empty update
 						if (Object.keys(body).length === 0) {
 							throw new NodeOperationError(
 								this.getNode(),
@@ -647,9 +843,8 @@ export class Hedy implements INodeType {
 				} else if (resource === 'session') {
 					// Session operations
 					if (operation === 'get') {
-						// Get single session
 						const sessionId = this.getNodeParameter('sessionId', i) as string;
-						
+
 						if (!sessionId) {
 							throw new NodeOperationError(this.getNode(), 'Session ID is required');
 						}
@@ -660,7 +855,6 @@ export class Hedy implements INodeType {
 							`/sessions/${sessionId}`,
 						);
 					} else if (operation === 'getAll') {
-						// Get multiple sessions
 						const returnAll = this.getNodeParameter('returnAll', i) as boolean;
 						const options = this.getNodeParameter('options', i, {}) as IDataObject;
 
@@ -685,18 +879,13 @@ export class Hedy implements INodeType {
 								qs,
 							);
 
-							// Handle pagination response
-							if (responseData && typeof responseData === 'object' && 'data' in responseData) {
-								responseData = responseData.data;
-							}
 						}
 					}
 				} else if (resource === 'highlight') {
 					// Highlight operations
 					if (operation === 'get') {
-						// Get single highlight
 						const highlightId = this.getNodeParameter('highlightId', i) as string;
-						
+
 						if (!highlightId) {
 							throw new NodeOperationError(this.getNode(), 'Highlight ID is required');
 						}
@@ -707,7 +896,6 @@ export class Hedy implements INodeType {
 							`/highlights/${highlightId}`,
 						);
 					} else if (operation === 'getAll') {
-						// Get multiple highlights
 						const returnAll = this.getNodeParameter('returnAll', i) as boolean;
 						const options = this.getNodeParameter('options', i, {}) as IDataObject;
 
@@ -732,27 +920,56 @@ export class Hedy implements INodeType {
 								qs,
 							);
 
-							// Handle pagination response
-							if (responseData && typeof responseData === 'object' && 'data' in responseData) {
-								responseData = responseData.data;
+						}
+					} else if (operation === 'getBySession') {
+						const sessionId = this.getNodeParameter('sessionId', i) as string;
+
+						if (!sessionId) {
+							throw new NodeOperationError(this.getNode(), 'Session ID is required');
+						}
+
+						const returnAll = this.getNodeParameter('returnAll', i) as boolean;
+
+						responseData = await hedyApiRequest.call(
+							this,
+							'GET',
+							`/sessions/${sessionId}/highlights`,
+						);
+
+						if (!returnAll) {
+							const limit = this.getNodeParameter('limit', i) as number;
+							if (Array.isArray(responseData) && responseData.length > limit) {
+								responseData = responseData.slice(0, limit);
 							}
 						}
 					}
 				} else if (resource === 'todo') {
 					// Todo operations
-					if (operation === 'getAll') {
-						// Get all todos
+					if (operation === 'get') {
+						const sessionId = this.getNodeParameter('sessionId', i) as string;
+						const todoId = this.getNodeParameter('todoId', i) as string;
+
+						if (!sessionId) {
+							throw new NodeOperationError(this.getNode(), 'Session ID is required');
+						}
+						if (!todoId) {
+							throw new NodeOperationError(this.getNode(), 'Todo ID is required');
+						}
+
+						responseData = await hedyApiRequest.call(
+							this,
+							'GET',
+							`/sessions/${sessionId}/todos/${todoId}`,
+						);
+					} else if (operation === 'getAll') {
 						const returnAll = this.getNodeParameter('returnAll', i) as boolean;
 
-						// Note: The todos endpoint returns all todos as a flat array
-						// and doesn't support server-side pagination
 						responseData = await hedyApiRequest.call(
 							this,
 							'GET',
 							'/todos',
 						);
 
-						// Apply client-side limit if not returning all
 						if (!returnAll) {
 							const limit = this.getNodeParameter('limit', i) as number;
 							if (Array.isArray(responseData) && responseData.length > limit) {
@@ -760,29 +977,20 @@ export class Hedy implements INodeType {
 							}
 						}
 					} else if (operation === 'getBySession') {
-						// Get todos by session
 						const sessionId = this.getNodeParameter('sessionId', i) as string;
-						
+
 						if (!sessionId) {
 							throw new NodeOperationError(this.getNode(), 'Session ID is required');
 						}
 
 						const returnAll = this.getNodeParameter('returnAll', i) as boolean;
 
-						// Note: The session todos endpoint doesn't support server-side pagination
-						// We always fetch all todos for the session and slice client-side if needed
 						responseData = await hedyApiRequest.call(
 							this,
 							'GET',
 							`/sessions/${sessionId}/todos`,
 						);
 
-						// Handle response format
-						if (responseData && typeof responseData === 'object' && 'data' in responseData) {
-							responseData = responseData.data;
-						}
-
-						// Apply client-side limit if not returning all
 						if (!returnAll) {
 							const limit = this.getNodeParameter('limit', i) as number;
 							if (Array.isArray(responseData) && responseData.length > limit) {
@@ -793,9 +1001,8 @@ export class Hedy implements INodeType {
 				} else if (resource === 'topic') {
 					// Topic operations
 					if (operation === 'get') {
-						// Get a specific topic
 						const topicId = this.getNodeParameter('topicId', i) as string;
-						
+
 						if (!topicId) {
 							throw new NodeOperationError(this.getNode(), 'Topic ID is required');
 						}
@@ -806,23 +1013,14 @@ export class Hedy implements INodeType {
 							`/topics/${topicId}`,
 						);
 					} else if (operation === 'getAll') {
-						// Get all topics
 						const returnAll = this.getNodeParameter('returnAll', i) as boolean;
 
-						// Note: The topics endpoint doesn't support server-side pagination
-						// We always fetch all topics and then slice client-side if needed
 						responseData = await hedyApiRequest.call(
 							this,
 							'GET',
 							'/topics',
 						);
 
-						// Handle response format
-						if (responseData && typeof responseData === 'object' && 'data' in responseData) {
-							responseData = responseData.data;
-						}
-
-						// Apply client-side limit if not returning all
 						if (!returnAll) {
 							const limit = this.getNodeParameter('limit', i) as number;
 							if (Array.isArray(responseData) && responseData.length > limit) {
@@ -830,55 +1028,173 @@ export class Hedy implements INodeType {
 							}
 						}
 					} else if (operation === 'getSessions') {
-						// Get sessions for a specific topic
+						// Server-side pagination with startAfter cursor
 						const topicId = this.getNodeParameter('topicId', i) as string;
-						
+
 						if (!topicId) {
 							throw new NodeOperationError(this.getNode(), 'Topic ID is required');
 						}
 
 						const returnAll = this.getNodeParameter('returnAll', i) as boolean;
 
-						// Note: The topic sessions endpoint doesn't support server-side pagination
-						// We always fetch all sessions for the topic and slice client-side if needed
-						responseData = await hedyApiRequest.call(
-							this,
-							'GET',
-							`/topics/${topicId}/sessions`,
-						);
+						if (returnAll) {
+							const allSessions: any[] = [];
+							let hasMore = true;
+							let startAfter: string | undefined;
 
-						// Handle response format
-						if (responseData && typeof responseData === 'object' && 'data' in responseData) {
-							responseData = responseData.data;
+							while (hasMore) {
+								const qs: IDataObject = { limit: 50 };
+								if (startAfter) {
+									qs.startAfter = startAfter;
+								}
+
+								// raw=true returns { success, data: { sessions, pagination } }
+								const response = await hedyApiRequest.call(
+									this,
+									'GET',
+									`/topics/${topicId}/sessions`,
+									undefined,
+									qs,
+									true,
+								);
+
+								const page = response?.data ?? response;
+								const sessions = page?.sessions || [];
+								if (Array.isArray(sessions)) {
+									allSessions.push(...sessions);
+								}
+
+								hasMore = page?.pagination?.hasMore || false;
+								startAfter = page?.pagination?.nextCursor;
+
+								if (allSessions.length >= 1000) break;
+							}
+
+							responseData = allSessions;
+						} else {
+							const limit = this.getNodeParameter('limit', i) as number;
+							const qs: IDataObject = { limit };
+
+							const response = await hedyApiRequest.call(
+								this,
+								'GET',
+								`/topics/${topicId}/sessions`,
+								undefined,
+								qs,
+								true,
+							);
+
+							const page = response?.data ?? response;
+							responseData = page?.sessions || [];
+							if (!Array.isArray(responseData)) {
+								responseData = [];
+							}
+						}
+					} else if (operation === 'create') {
+						const name = this.getNodeParameter('name', i) as string;
+						const additionalFields = this.getNodeParameter('additionalFields', i, {}) as IDataObject;
+
+						if (!name) {
+							throw new NodeOperationError(this.getNode(), 'Name is required');
 						}
 
-						// Apply client-side limit if not returning all
-						if (!returnAll) {
-							const limit = this.getNodeParameter('limit', i) as number;
-							if (Array.isArray(responseData) && responseData.length > limit) {
-								responseData = responseData.slice(0, limit);
-							}
+						const body: IDataObject = { name };
+
+						if (additionalFields.description !== undefined && additionalFields.description !== '') {
+							body.description = additionalFields.description;
+						}
+						if (additionalFields.color !== undefined && additionalFields.color !== '') {
+							body.color = additionalFields.color;
+						}
+						if (additionalFields.iconName !== undefined && additionalFields.iconName !== '') {
+							body.iconName = additionalFields.iconName;
+						}
+						if (additionalFields.topicContext !== undefined && additionalFields.topicContext !== '') {
+							body.topicContext = additionalFields.topicContext;
+						}
+
+						responseData = await hedyApiRequest.call(
+							this,
+							'POST',
+							'/topics',
+							body,
+						);
+					} else if (operation === 'update') {
+						const topicId = this.getNodeParameter('topicId', i) as string;
+						const updateFields = this.getNodeParameter('updateFields', i, {}) as IDataObject;
+
+						if (!topicId) {
+							throw new NodeOperationError(this.getNode(), 'Topic ID is required');
+						}
+
+						const body: IDataObject = {};
+
+						if (updateFields.name !== undefined && updateFields.name !== '') {
+							body.name = updateFields.name;
+						}
+						if (updateFields.description !== undefined) {
+							body.description = updateFields.description;
+						}
+						if (updateFields.color !== undefined && updateFields.color !== '') {
+							body.color = updateFields.color;
+						}
+						if (updateFields.iconName !== undefined && updateFields.iconName !== '') {
+							body.iconName = updateFields.iconName;
+						}
+						if (updateFields.topicContext !== undefined) {
+							// Empty string means clear (send null to API)
+							body.topicContext = updateFields.topicContext === '' ? null : updateFields.topicContext;
+						}
+
+						if (Object.keys(body).length === 0) {
+							throw new NodeOperationError(
+								this.getNode(),
+								'At least one field must be set for update. Add a field in Update Fields.',
+							);
+						}
+
+						responseData = await hedyApiRequest.call(
+							this,
+							'PATCH',
+							`/topics/${topicId}`,
+							body,
+						);
+					} else if (operation === 'delete') {
+						const topicId = this.getNodeParameter('topicId', i) as string;
+
+						if (!topicId) {
+							throw new NodeOperationError(this.getNode(), 'Topic ID is required');
+						}
+
+						responseData = await hedyApiRequest.call(
+							this,
+							'DELETE',
+							`/topics/${topicId}`,
+						);
+
+						if (!responseData) {
+							responseData = { success: true, deleted: true };
 						}
 					}
 				}
 
-				// Process response data
+				// Process response data with backward-compat normalization
 				if (Array.isArray(responseData)) {
 					returnData.push(...responseData.map(item => ({
-						json: item,
-						pairedItem: { item: i }
+						json: normalizeResponseData(item as IDataObject),
+						pairedItem: { item: i },
 					})));
 				} else if (responseData !== undefined) {
 					returnData.push({
-						json: responseData,
-						pairedItem: { item: i }
+						json: normalizeResponseData(responseData as IDataObject),
+						pairedItem: { item: i },
 					});
 				}
 			} catch (error) {
 				if (this.continueOnFail()) {
-					returnData.push({ 
-						json: { 
-							error: (error as Error).message 
+					returnData.push({
+						json: {
+							error: (error as Error).message
 						},
 						pairedItem: { item: i },
 					});

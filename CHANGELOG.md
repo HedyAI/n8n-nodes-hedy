@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-04-03
+
+### Added
+- **EU Region Support**: New region selector in credentials (US/EU) with `eu-api.hedy.bot` endpoint
+- **Topic CRUD**: Create, Update, and Delete operations for topics
+- **Highlight Get By Session**: Retrieve all highlights for a specific session
+- **Todo Get**: Retrieve a single todo by ID within a session
+- **Session Exported Webhook**: New `session.exported` trigger event for manual session exports
+- New session fields: `session_type`, `session_notes`, `exportedAt`, `highlights`
+- New highlight field: `timeIndex` (milliseconds from session start)
+- Expanded topic fields: `description`, `topicContext`, `overview`, stats fields
+- `sessionId` field added to Todo responses
+
+### Fixed
+- **Pagination Bug**: `returnAll` for sessions and highlights now correctly fetches all pages (was only returning first page)
+- **Topic Sessions Pagination**: Now uses server-side cursor pagination instead of broken client-side slicing
+- **Webhook Limit**: Error message corrected from 10 to 50
+- **Field Naming**: Highlight responses now use correct `aiInsight` (was `aiInsights`) and `highlightId` (was `id`)
+- **Session ID**: Responses now use correct `sessionId` (was `id`) matching the API
+- User-Agent header updated to `1.3.0`
+
+### Backward Compatibility
+- Runtime normalization adds `id` and `aiInsights` aliases to responses for existing workflows
+- New `region` credential field defaults to US — no user action needed
+- All existing operations continue to work unchanged
+
 ## [1.2.0] - 2025-01-16
 
 ### Added

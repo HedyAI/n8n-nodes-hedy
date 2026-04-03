@@ -63,6 +63,11 @@ export class HedyTrigger implements INodeType {
 						description: 'Triggers when a session ends (equivalent to Zapier\'s "Session Completed")',
 					},
 					{
+						name: 'Session Exported',
+						value: WebhookEvent.SessionExported,
+						description: 'Triggers when a user manually exports a session via the app. Payload includes exportedAt instead of endTime.',
+					},
+					{
 						name: 'Highlight Created',
 						value: WebhookEvent.HighlightCreated,
 						description: 'Triggers when a new highlight is created during a session',
@@ -165,7 +170,7 @@ export class HedyTrigger implements INodeType {
 					if (errorCode === 'webhook_limit_exceeded') {
 						throw new NodeOperationError(
 							this.getNode(),
-							'Maximum webhook limit reached (10). Please delete unused webhooks in your Hedy dashboard or by deactivating other workflows.',
+							'Maximum webhook limit reached (50). Please delete unused webhooks in your Hedy dashboard or by deactivating other workflows.',
 						);
 					}
 
@@ -202,7 +207,7 @@ export class HedyTrigger implements INodeType {
 		const options = this.getNodeParameter('options', {}) as IDataObject;
 
 		// Verify webhook signature if enabled
-		if (options.verifySignature !== false) {
+		if (options.verifySignature === true) {
 			const signature = headers['x-hedy-signature'] as string;
 			
 			if (!signature) {

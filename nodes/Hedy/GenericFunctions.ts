@@ -18,20 +18,24 @@ export async function hedyApiRequest(
 	endpoint: string,
 	body?: IDataObject,
 	qs?: IDataObject,
+	raw?: boolean,
 ): Promise<any> {
 	const credentials = await this.getCredentials('hedyApi');
-	
+
 	if (!credentials?.apiKey) {
 		throw new NodeOperationError(this.getNode(), 'No API key provided');
 	}
 
+	const region = (credentials.region as string) || 'us';
+	const baseUrl = region === 'eu' ? 'https://eu-api.hedy.bot' : 'https://api.hedy.bot';
+
 	const options: IHttpRequestOptions = {
 		method,
-		url: `https://api.hedy.bot${endpoint}`,
+		url: `${baseUrl}${endpoint}`,
 		headers: {
 			'Authorization': `Bearer ${credentials.apiKey}`,
 			'Content-Type': 'application/json',
-			'User-Agent': 'n8n-nodes-hedy/1.0.0',
+			'User-Agent': 'n8n-nodes-hedy/1.3.0',
 		},
 		qs,
 		body,
@@ -39,24 +43,22 @@ export async function hedyApiRequest(
 		returnFullResponse: false,
 	};
 
-	// Add Zapier format support if requested
-	if (qs?.format === 'zapier') {
-		options.qs = { ...qs, format: 'zapier' };
-	}
-
 	try {
 		const response = await this.helpers.httpRequest(options);
-		
+
 		// Handle API response format
 		if (response && typeof response === 'object') {
 			if ('success' in response && !response.success) {
 				throw new NodeApiError(this.getNode(), response as any);
 			}
+			if (raw) {
+				return response;
+			}
 			if ('data' in response) {
 				return response.data;
 			}
 		}
-		
+
 		return response;
 	} catch (error) {
 		if (error instanceof NodeApiError || error instanceof NodeOperationError) {
@@ -68,14 +70,13 @@ export async function hedyApiRequest(
 			const apiError = error as any;
 			const errorCode = apiError.error?.code || 'unknown_error';
 			const errorMessage = apiError.error?.message || 'An unknown error occurred';
-			
 
 			// Provide user-friendly error messages
 			switch (errorCode) {
 				case ErrorCode.WebhookLimitExceeded:
 					throw new NodeOperationError(
 						this.getNode(),
-						'Maximum webhook limit reached (10). Please delete unused webhooks in your Hedy dashboard.',
+						'Maximum webhook limit reached (50). Please delete unused webhooks in your Hedy dashboard.',
 					);
 				case ErrorCode.AuthenticationFailed:
 					throw new NodeOperationError(
@@ -85,7 +86,7 @@ export async function hedyApiRequest(
 				case ErrorCode.InvalidEvent:
 					throw new NodeOperationError(
 						this.getNode(),
-						'Invalid event type. Valid events: session.created, session.ended, highlight.created, todo.exported',
+						'Invalid event type. Valid events: session.created, session.ended, session.exported, highlight.created, todo.exported',
 					);
 				case ErrorCode.InvalidWebhookUrl:
 					throw new NodeOperationError(
@@ -130,24 +131,19 @@ export async function hedyApiRequestAllItems(
 			qs.after = cursor;
 		}
 
-		const response = await hedyApiRequest.call(this, 'GET', endpoint, undefined, qs);
+		const response = await hedyApiRequest.call(this, 'GET', endpoint, undefined, qs, true);
 
 		if (Array.isArray(response)) {
 			// Zapier format - flat array
 			returnData.push(...response);
-			hasMore = false; // Zapier format doesn't support pagination
-		} else if (response && typeof response === 'object' && 'data' in response) {
-			// Standard format with pagination
+			hasMore = false;
+		} else if (response?.data && Array.isArray(response.data)) {
+			// Standard format with pagination envelope
 			returnData.push(...response.data);
-			
-			if (response.pagination) {
-				hasMore = response.pagination.hasMore || false;
-				cursor = response.pagination.next;
-			} else {
-				hasMore = false;
-			}
+			hasMore = response.pagination?.hasMore || false;
+			cursor = response.pagination?.next;
 		} else {
-			// Unknown format, return as is
+			// Unknown format
 			if (response) {
 				returnData.push(response);
 			}
@@ -156,7 +152,6 @@ export async function hedyApiRequestAllItems(
 
 		// Safety check to prevent infinite loops
 		if (returnData.length >= 1000) {
-			// Reached maximum item limit of 1000
 			break;
 		}
 	}
@@ -172,17 +167,17 @@ export function verifyWebhookSignature(
 	const expectedSignature = createHmac('sha256', secret)
 		.update(body)
 		.digest('hex');
-	
+
 	// Constant-time comparison to prevent timing attacks
 	if (signature.length !== expectedSignature.length) {
 		return false;
 	}
-	
+
 	let result = 0;
 	for (let i = 0; i < signature.length; i++) {
 		result |= signature.charCodeAt(i) ^ expectedSignature.charCodeAt(i);
 	}
-	
+
 	return result === 0;
 }
 
@@ -218,7 +213,6 @@ export async function unregisterWebhook(
 		);
 	} catch (error) {
 		// Ignore errors when deleting webhooks (webhook might already be deleted)
-		// Failed to delete webhook - this is expected if webhook was already deleted
 	}
 }
 
@@ -237,7 +231,7 @@ export function parseApiError(error: any): { code: string; message: string } {
 			};
 		}
 	}
-	
+
 	return {
 		code: 'unknown_error',
 		message: 'An unknown error occurred',
