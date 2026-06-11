@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.1] - 2026-06-11
+
+### Fixed
+- Use `httpRequestWithAuthentication` so the `hedyApi` credential's `authenticate` block injects the Authorization header, instead of building it manually. Resolves the n8n Cloud verification finding and lets the integration benefit from n8n's built-in auth handling.
+
 ## [1.3.0] - 2026-04-03
 
 ### Added

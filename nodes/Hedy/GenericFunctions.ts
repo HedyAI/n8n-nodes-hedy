@@ -33,9 +33,8 @@ export async function hedyApiRequest(
 		method,
 		url: `${baseUrl}${endpoint}`,
 		headers: {
-			'Authorization': `Bearer ${credentials.apiKey}`,
 			'Content-Type': 'application/json',
-			'User-Agent': 'n8n-nodes-hedy/1.3.0',
+			'User-Agent': 'n8n-nodes-hedy/1.3.1',
 		},
 		qs,
 		body,
@@ -44,7 +43,9 @@ export async function hedyApiRequest(
 	};
 
 	try {
-		const response = await this.helpers.httpRequest(options);
+		// Auth is injected by the credential's `authenticate` block via
+		// httpRequestWithAuthentication, so the Authorization header is not set manually here.
+		const response = await this.helpers.httpRequestWithAuthentication.call(this, 'hedyApi', options);
 
 		// Handle API response format
 		if (response && typeof response === 'object') {
