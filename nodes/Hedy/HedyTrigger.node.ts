@@ -5,7 +5,6 @@ import {
 	INodeTypeDescription,
 	IDataObject,
 	NodeOperationError,
-	NodeConnectionType,
 } from 'n8n-workflow';
 
 import {
@@ -28,7 +27,7 @@ export class HedyTrigger implements INodeType {
 			name: 'Hedy Trigger',
 		},
 		inputs: [],
-		outputs: [{type: NodeConnectionType.Main}],
+		outputs: [{type: 'main'}],
 		credentials: [
 			{
 				name: 'hedyApi',

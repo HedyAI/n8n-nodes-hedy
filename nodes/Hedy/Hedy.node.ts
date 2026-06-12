@@ -5,7 +5,6 @@ import {
 	INodeTypeDescription,
 	IDataObject,
 	NodeOperationError,
-	NodeConnectionType,
 } from 'n8n-workflow';
 
 import {
@@ -55,8 +54,8 @@ export class Hedy implements INodeType {
 		defaults: {
 			name: 'Hedy',
 		},
-		inputs: [{type: NodeConnectionType.Main}],
-		outputs: [{type: NodeConnectionType.Main}],
+		inputs: [{type: 'main'}],
+		outputs: [{type: 'main'}],
 		credentials: [
 			{
 				name: 'hedyApi',

@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - Publish to npm via a GitHub Actions workflow with an npm provenance statement (Sigstore build attestation), so the package build source can be cryptographically verified. Required for n8n Cloud verification; no functional change to the node.
+- Use the `'main'` connection-type literal for node inputs/outputs and pin the `n8n-workflow` build dependency, so the package builds reproducibly against current `n8n-workflow` releases. Compiled output is unchanged.
 - User-Agent header updated to `1.3.2`.
 
 ## [1.3.1] - 2026-06-11
