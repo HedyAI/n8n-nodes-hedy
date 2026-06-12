@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.2] - 2026-06-12
+
+### Changed
+- Publish to npm via a GitHub Actions workflow with an npm provenance statement (Sigstore build attestation), so the package build source can be cryptographically verified. Required for n8n Cloud verification; no functional change to the node.
+- User-Agent header updated to `1.3.2`.
+
 ## [1.3.1] - 2026-06-11
 
 ### Fixed
