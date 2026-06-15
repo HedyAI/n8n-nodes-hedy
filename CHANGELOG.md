@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.3] - 2026-06-12
+
+### Changed
+- Declare the `n8n-workflow` peer dependency as `*` so it resolves against whatever version the host n8n instance provides, as required for n8n Cloud verification. The pinned `n8n-workflow` build dependency is unchanged, so builds stay reproducible.
+- User-Agent header updated to `1.3.3`.
+
 ## [1.3.2] - 2026-06-12
 
 ### Changed
