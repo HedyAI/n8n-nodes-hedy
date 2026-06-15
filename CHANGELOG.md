@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.4] - 2026-06-12
+
+### Fixed
+- Bundle the node icon (`hedy.png`) in the published package again. The build now copies icon assets into `dist` (tsc does not), so the icon stopped shipping in 1.3.3 when the package was built from a clean CI checkout. The release workflow also fails fast if the icon is missing from the build output.
+
+### Changed
+- The publish workflow enforces the tag/version match on manual runs too, so every provenance-backed release is tied to a matching tag.
+- User-Agent header updated to `1.3.4`.
+
 ## [1.3.3] - 2026-06-12
 
 ### Changed

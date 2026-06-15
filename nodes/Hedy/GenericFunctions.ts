@@ -34,7 +34,7 @@ export async function hedyApiRequest(
 		url: `${baseUrl}${endpoint}`,
 		headers: {
 			'Content-Type': 'application/json',
-			'User-Agent': 'n8n-nodes-hedy/1.3.3',
+			'User-Agent': 'n8n-nodes-hedy/1.3.4',
 		},
 		qs,
 		body,

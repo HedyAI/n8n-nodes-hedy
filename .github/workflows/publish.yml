@@ -33,11 +33,14 @@ jobs:
           registry-url: 'https://registry.npmjs.org'
 
       - name: Verify tag matches package.json version
-        if: github.event_name == 'push'
+        # Runs for both tag pushes and manual dispatch. A manual dispatch from a
+        # branch ref fails here (its ref name is not v<version>), so the only way
+        # to publish is from a tag whose name matches package.json — keeping every
+        # provenance-backed release tied to a tagged commit.
         run: |
           PKG_VERSION="v$(node -p "require('./package.json').version")"
           if [ "$PKG_VERSION" != "$GITHUB_REF_NAME" ]; then
-            echo "::error::Tag $GITHUB_REF_NAME does not match package.json version $PKG_VERSION"
+            echo "::error::Ref $GITHUB_REF_NAME does not match package.json version $PKG_VERSION (publish only from a matching tag)"
             exit 1
           fi
 
@@ -46,6 +49,10 @@ jobs:
 
       - name: Build
         run: npm run build
+
+      - name: Verify icon assets are bundled
+        run: |
+          test -f dist/nodes/Hedy/hedy.png || { echo "::error::dist/nodes/Hedy/hedy.png is missing — the build did not bundle the node icon"; exit 1; }
 
       - name: Publish to npm with provenance
         run: npm publish --provenance --access public
