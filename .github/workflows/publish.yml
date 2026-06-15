@@ -32,15 +32,20 @@ jobs:
           node-version: '22'
           registry-url: 'https://registry.npmjs.org'
 
-      - name: Verify tag matches package.json version
-        # Runs for both tag pushes and manual dispatch. A manual dispatch from a
-        # branch ref fails here (its ref name is not v<version>), so the only way
-        # to publish is from a tag whose name matches package.json — keeping every
-        # provenance-backed release tied to a tagged commit.
+      - name: Verify publish runs from a matching tag
+        # Publishes only from a tag ref whose name equals v<package.json version>,
+        # so every provenance-backed release is tied to a tagged commit. The
+        # ref-type check is load-bearing: workflow_dispatch can run from a branch,
+        # and without it a branch named like the version (e.g. v1.3.5) would pass
+        # the name check and publish untagged.
         run: |
+          if [ "$GITHUB_REF_TYPE" != "tag" ]; then
+            echo "::error::Publish must run from a tag ref, got $GITHUB_REF_TYPE $GITHUB_REF_NAME"
+            exit 1
+          fi
           PKG_VERSION="v$(node -p "require('./package.json').version")"
           if [ "$PKG_VERSION" != "$GITHUB_REF_NAME" ]; then
-            echo "::error::Ref $GITHUB_REF_NAME does not match package.json version $PKG_VERSION (publish only from a matching tag)"
+            echo "::error::Tag $GITHUB_REF_NAME does not match package.json version $PKG_VERSION"
             exit 1
           fi
 
