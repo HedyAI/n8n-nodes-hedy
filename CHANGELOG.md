@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.5] - 2026-08-18
+
+### Fixed
+- The credential "Connection" test no longer reports a working API key as a failure. n8n's `responseSuccessBody` rule flags an error when the response body matches the given key/value, so the rule matching `success: true` fired on every healthy call and rendered "Couldn't connect with these settings", with "Connected successfully!" shown as the error text behind **More details**. The rule is gone; `GET /sessions` returns 401 without a valid key, so a 2xx is proof enough on its own. Present since 1.0.0.
+
+### Changed
+- User-Agent header updated to `1.3.5`.
+
 ## [1.3.4] - 2026-06-12
 
 ### Fixed
